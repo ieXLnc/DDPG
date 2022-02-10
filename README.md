@@ -29,4 +29,7 @@ Agent:
 - mean reward: mean of last ten 
 - mean early val: mean of last x test ep
 
-![Pendulum-v0_4625__plot_Trained_100rewards](https://user-images.githubusercontent.com/63811972/153404523-33a91f85-7572-4a58-9c01-d241b717abe6.png)
+
+![Pendulum-v0_88528__plot_Trained_perf](https://user-images.githubusercontent.com/63811972/153418561-4d6565fb-b815-4ede-9ead-1b54c21b4a18.png)
+
+
