@@ -6,17 +6,19 @@ Model in training!
 
 Actor Net:
 - in_dims: n_obs
-- fc1: 256
-- fc2: 128
+- fc1: 256 (Relu activation)
+- fc2: 128 (Relu activation)
 - lr: 0.0001
-- out_dims: n_acts
+- out_dims: n_acts (Tanh activation)
+- uniform_ init of the weights
 
 Critic:
 - in_dims: n_obs
-- fc1: 256
-- fc2: 128 + n_acts
+- fc1: 256 (Relu activation)
+- fc2: 128 + n_acts (Relu activation)
 - lr: 0.001
 - out_dims: 1
+- uniform_ init of the weights
 
 Agent:
 - gamma: 0.99
