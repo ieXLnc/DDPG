@@ -25,8 +25,8 @@ Agent:
 - tau: 0.01
 - batch_size = 128
 - reward: rewards for the ep
+- mean reward: mean of last 10 rewards
 - test reward: test episode played
-- mean reward: mean of last ten 
 - mean early val: mean of last 100 test ep
 
 
