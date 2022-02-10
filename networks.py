@@ -23,16 +23,15 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
 
         self.layer1 = nn.Linear(in_dims, fc1)
-        self.layer2 = nn.Linear(fc1, fc2)
-        self.layer3 = nn.Linear(fc2, out_dims)
+        self.layer2 = nn.Linear(fc1+out_dims, fc2)
+        self.layer3 = nn.Linear(fc2, 1)
 
         self.apply(weight_init__uniform_net)
 
     def forward(self, state, action):
 
-        x = torch.cat([state, action], 1)
-        x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
+        x = F.relu(self.layer1(state))
+        x = F.relu(self.layer2(torch.cat([x, action], 1)))
         x = self.layer3(x)
 
         return x

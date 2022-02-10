@@ -7,6 +7,10 @@ from utils import ReplayBuffer
 import pickle
 
 torch.manual_seed(14)
+# set GPU for faster training
+cuda = torch.cuda.is_available()  # check for CUDA
+device = torch.device("cuda" if cuda else "cpu")
+print("Job will run on {}".format(device))
 
 
 class DDPGAgent:
@@ -28,12 +32,12 @@ class DDPGAgent:
         self.fc1 = fc1
         self.fc2 = fc2
 
-        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts)
-        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts)
+        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)
+        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=self.actor_lr)
 
-        self.critic = Critic(self.n_obs + self.n_acts, self.fc1, self.fc2, self.n_acts)
-        self.critic_target = Critic(self.n_obs + self.n_acts, self.fc1, self.fc2, self.n_acts)
+        self.critic = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)        # here out dims to process actions
+        self.critic_target = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)  # here out dims to process actions
         self.critic_optimizer = Adam(self.critic.parameters(), lr=self.critic_lr)
 
         # setup weights
@@ -66,14 +70,14 @@ class DDPGAgent:
 
     def get_action(self, state):
         if isinstance(state, np.ndarray):
-            state = torch.FloatTensor(state)
+            state = torch.FloatTensor(state).to(device)
         action = self.actor(state)
 
         return action.detach().numpy()
 
     def update_models(self):
 
-        if self.replay_buffer.__len__() < self.batch_size:
+        if self.replay_buffer.len_() < self.batch_size:
             return
 
         states, actions, rewards, dones, next_states = self.replay_buffer.get_sample()
@@ -147,6 +151,7 @@ class DDPGAgent:
 
         self.log['rewards'].append(self.log['rewards_ep'])
         self.log['mean_rewards'].append(np.mean(self.log['rewards'][-10:]))
+        mean_early_stop = np.mean(self.log['test_rew'][-100:])
 
         print(f'-------------------------------------------------')
         print(f'----------- Episode #{self.log["episode"]}-------------------')
@@ -161,11 +166,12 @@ class DDPGAgent:
             print(f'Best model: {best_current_score}')
 
         print(f'test rewards: {self.log["test_rew"][-1]}')
+        print(f'mean early stop is currently: {mean_early_stop}')
         print(f'Actor loss: {self.log["actor_loss"][-1]}')
         print(f'Critic loss: {self.log["critic_loss"][-1]}')
         print(f'With Batch size of {self.log["batch_size"]}')
 
-        if last_val > self.early_stop_val:
+        if mean_early_stop > self.early_stop_val:
             self.early_stop = True
             self.save_models()
             with open('./Models/logger_' + self.name_env + '.pkl', 'wb') as handle:

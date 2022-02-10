@@ -4,10 +4,14 @@ import random
 import pickle
 import torch
 import gym
+import matplotlib.pyplot as plt
 
 np.random.default_rng(14)
 random.seed(14)
 torch.manual_seed(14)
+
+cuda = torch.cuda.is_available()  # check for CUDA
+device = torch.device("cuda" if cuda else "cpu")
 
 
 class ReplayBuffer:
@@ -22,23 +26,13 @@ class ReplayBuffer:
     def get_sample(self):
         random_sample = random.sample(self.buffer, self.batch_size)
 
-        # states, actions, rewards, dones, next_states = map(np.stack, zip(*random_sample))
-        states = np.zeros((self.batch_size, 3), dtype=np.float)
-        actions = np.zeros((self.batch_size, 1), dtype=np.float)
-        rewards = np.zeros((self.batch_size, 1), dtype=np.float)
-        dones = np.zeros((self.batch_size, 1), dtype=np.float)
-        next_states = np.zeros((self.batch_size, 3), dtype=np.float)
-        for (state, action, reward, done, next_state), (t) in zip(random_sample, range(self.batch_size)):
-            states[t] = state
-            actions[t] = action
-            rewards[t] = reward
-            dones[t] = done
-            next_states[t] = next_state
+        states, actions, rewards, dones, next_states = map(np.stack, zip(*random_sample))
 
-        return torch.FloatTensor(states), torch.FloatTensor(actions), torch.FloatTensor(rewards), \
-              torch.FloatTensor(dones), torch.FloatTensor(next_states)
+        return torch.FloatTensor(states).to(device), torch.FloatTensor(actions).to(device),\
+               torch.FloatTensor(rewards).unsqueeze(1).to(device), torch.FloatTensor(dones).unsqueeze(1).to(device),\
+               torch.FloatTensor(next_states).to(device)
 
-    def __len__(self):
+    def len_(self):
         return len(self.buffer)
 
     def save_memory(self, name):
@@ -91,3 +85,39 @@ class NormalizedEnv(gym.ActionWrapper):
         act_k_inv = 2./(self.action_space.high - self.action_space.low)
         act_b = (self.action_space.high + self.action_space.low)/ 2.
         return act_k_inv * (action - act_b)
+
+
+def plot(rewards_list, avg_reward_list, test_rewards, actor_loss_list, critic_loss_list, name_task):
+
+    # Create two plots: one for the loss value, one for the accuracy
+    fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(24, 10))
+
+    # Plot accuracy values
+    ax1.plot(rewards_list, label='Rewards', color='red', alpha=0.3)
+    ax1.plot(avg_reward_list, label='Average rewards', color='red')
+    ax1.plot(test_rewards, label='Test rewards', color='green')
+    ax1.set_title('Rewards for the {} task'.format(name_task))
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Rewards')
+    ax1.legend()
+
+    # Plot accuracy values
+    ax2.plot(actor_loss_list, label='Actor Losses', color='blue')
+    ax2.set_title('Actor Network Losses for the {} task'.format(name_task))
+    ax2.set_xlabel('Epoch')
+    ax2.set_ylabel('Losses')
+    ax2.legend()
+
+    ax3.plot(critic_loss_list, label='Critic Losses', color='black')
+    ax3.set_title('Critic Network Losses for the {} task'.format(name_task))
+    ax3.set_xlabel('Epoch')
+    ax3.set_ylabel('Losses')
+    ax3.legend()
+
+    number = random.randint(1, 100000)
+    plt.savefig("./Plots/" + name_task + '_' + str(number) + '_' + '_plot.png')
+    plt.show()
+
+
+def gif(images, name, address="./recordings/"):
+    images[0].save(address + name, save_all=True, append_images=images[1:], optimize=True, duration=40, loop=0)
