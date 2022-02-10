@@ -27,7 +27,7 @@ Agent:
 - reward: rewards for the ep
 - test reward: test episode played
 - mean reward: mean of last ten 
-- mean early val: mean of last x test ep
+- mean early val: mean of last 100 test ep
 
 
 ![Pendulum-v0_88528__plot_Trained_perf](https://user-images.githubusercontent.com/63811972/153418561-4d6565fb-b815-4ede-9ead-1b54c21b4a18.png)
