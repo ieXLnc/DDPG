@@ -6,24 +6,24 @@ Model in training!
 
 Actor Net:
 - in_dims: n_obs
-- fc1: 256 (Relu activation)
-- fc2: 128 (Relu activation)
-- lr: 0.0001
-- out_dims: n_acts (Tanh activation)
+- fc1: 400 (Relu activation)
+- fc2: 300 (Relu activation)
+- lr: 0.00005
+- out_dims: n_acts (Tanh activation) * action_space.high
 - uniform_ init of the weights
 
 Critic:
 - in_dims: n_obs
-- fc1: 256 (Relu activation)
-- fc2: 128 + n_acts (Relu activation)
-- lr: 0.001
+- fc1: 400 (Relu activation)
+- fc2: 300 + n_acts (Relu activation)
+- lr: 0.0005
 - out_dims: 1
 - uniform_ init of the weights
 
 Agent:
 - gamma: 0.99
-- tau: 0.01
-- batch_size = 128
+- tau: 0.001
+- batch_size = 64
 - reward: rewards for the ep
 - mean reward: mean of last 10 rewards
 - test reward: test episode played
