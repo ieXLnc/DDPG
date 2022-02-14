@@ -10,7 +10,8 @@ if __name__ == '__main__':
     # select env and
     pendulum = 'Pendulum-v0'
     lunar = 'LunarLanderContinuous-v2'
-    name_env = pendulum
+    biped = 'BipedalWalker-v3'
+    name_env = lunar
     # Create env
     env = NormalizedEnv(gym.make(name_env))
     env.action_space.seed(14)
@@ -23,8 +24,8 @@ if __name__ == '__main__':
         name = './Models/actor_' + name_env + '_model.pth'
 
         n_obs = env.observation_space.shape[0]
-        fc1 = 256
-        fc2 = 128
+        fc1 = 400
+        fc2 = 300
         n_acts = env.action_space.shape[0]
 
         print('using model:', name)
@@ -65,10 +66,10 @@ if __name__ == '__main__':
 
     else:
         # Create agent
-        agent = DDPGAgent(env, batch_size=128, early_stop_val=-200)
+        agent = DDPGAgent(env, fc1=400, fc2=300, batch_size=64, early_stop_val=200)
         noise = OUNoise(env.action_space)
 
-        TRAINING_EP = 100_000
+        TRAINING_EP = 100_000_000
 
         all_rewards = []
         mean_rewards = []
@@ -79,7 +80,7 @@ if __name__ == '__main__':
             noise.reset()
             rewards = 0
 
-            for step in range(1000):
+            for step in range(1600):
 
                 action = agent.get_action(state)                 # np array with one val .detach()
                 action_noise = noise.get_action(action, step)

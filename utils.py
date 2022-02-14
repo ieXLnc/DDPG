@@ -2,7 +2,7 @@ import numpy as np
 from collections import deque
 import random
 import pickle
-import torch
+import torch  # Torch version :1.9.0+cpu
 import gym
 import matplotlib.pyplot as plt
 

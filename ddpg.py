@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+import torch # Torch version :1.9.0+cpu
 from torch import nn
 from torch.optim import Adam
 from networks import *
@@ -24,16 +24,18 @@ class DDPGAgent:
 
         # hyperparams
         self.gamma = 0.99
-        self.actor_lr = 0.0001
-        self.critic_lr = 0.001
+        self.actor_lr = 0.00005         #0.0001 for pendulum
+        self.critic_lr = 0.0005       # 0.001 for pendulum
         self.tau = 0.001
+        self.min = -np.inf
+        self.max = np.inf
 
         # Create the networks
         self.fc1 = fc1
         self.fc2 = fc2
 
-        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)
-        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)
+        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, env.action_space).to(device)
+        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, env.action_space).to(device)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=self.actor_lr)
 
         self.critic = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)        # here out dims to process actions
@@ -47,7 +49,7 @@ class DDPGAgent:
             target_params.data.copy_(params.data)
 
         # Memory
-        self.memory_size = 100_000
+        self.memory_size = 1_000_000
         self.batch_size = batch_size
         self.replay_buffer = ReplayBuffer(self.memory_size, self.batch_size)
 
@@ -73,7 +75,7 @@ class DDPGAgent:
             state = torch.FloatTensor(state).to(device)
         action = self.actor(state)
 
-        return action.detach().numpy()
+        return action.detach().cpu().numpy()
 
     def update_models(self):
 
@@ -87,14 +89,15 @@ class DDPGAgent:
         Qvals = self.critic.forward(states, actions)
         next_actions = self.actor_target.forward(next_states)
         next_Q = self.critic_target.forward(next_states, next_actions.detach())
-        Qprime = rewards + self.gamma * next_Q
+        Qprime = rewards + (1.0 - dones) * self.gamma * next_Q
+        # Qprime = torch.clamp(Qprime, self.min, self.max)
 
         critic_loss = nn.MSELoss()(Qvals, Qprime)
-        self.log['critic_loss'].append(critic_loss.detach().numpy())
+        self.log['critic_loss'].append(critic_loss.detach().cpu().numpy())
 
         # Actor loss
         policy_loss = - self.critic.forward(states, self.actor.forward(states)).mean()
-        self.log['actor_loss'].append(policy_loss.detach().numpy())
+        self.log['actor_loss'].append(policy_loss.detach().cpu().numpy())
 
         # -------- Update networks --------
         self.actor_optimizer.zero_grad()
