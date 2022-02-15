@@ -6,6 +6,10 @@ from torch.nn import functional as F
 torch.manual_seed(14)
 np.random.default_rng(14)
 
+cuda = torch.cuda.is_available()  # check for CUDA
+device = torch.device("cuda" if cuda else "cpu")
+print("Job will run on {}".format(device))
+
 
 def weight_init__uniform_net(m):
     classname = m.__class__.__name__
@@ -89,6 +93,6 @@ class Actor(nn.Module):
         x = F.relu(self.layer2(x))
         x = torch.tanh(self.layer3(x))
 
-        x = x * torch.from_numpy(self.action_space.high).float()
+        x = x * torch.from_numpy(self.action_space.high).float().to(device)
 
         return x

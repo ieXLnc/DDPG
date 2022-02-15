@@ -1,113 +1,83 @@
-import matplotlib.pyplot as plt
 from utils import *
 from ddpg import DDPGAgent
 from networks import Actor
 from PIL import Image
 
-
 if __name__ == '__main__':
 
-    # select env and
-    pendulum = 'Pendulum-v0'
-    lunar = 'LunarLanderContinuous-v2'
-    biped = 'BipedalWalker-v3'
-    name_env = lunar
-    # Create env
-    env = NormalizedEnv(gym.make(name_env))
-    env.action_space.seed(14)
-
-    TESTING = False
+    TRAIN = True
     RECORD = False
+    test_epochs = 5
 
-    if TESTING:
+    fc1 = 256
+    fc2 = 128
 
-        name = './Models/actor_' + name_env + '_model.pth'
+    environments = {
+        'pendulum': {
+            'name_env': 'Pendulum-v0',
+            'early_stop_val': -200,
+            'batch_size': 64},
+        'mountain': {
+            'name_env': 'MountainCarContinuous-v0',
+            'early_stop_val': 90,
+            'batch_size': 64},
+        'lunar': {
+            'name_env': 'LunarLanderContinuous-v2',
+            'early_stop_val': 200,
+            'batch_size': 64},
+        'biped': {
+            'name_env': 'BipedalWalker-v3',
+            'early_stop_val': 250,
+            'batch_size': 64}
+                   }
 
-        n_obs = env.observation_space.shape[0]
-        fc1 = 400
-        fc2 = 300
-        n_acts = env.action_space.shape[0]
+    if TRAIN:
 
-        print('using model:', name)
-        model = Actor(n_obs, fc1, fc2, n_acts)
-        model.load_state_dict(torch.load(name))
+        for key, info_env in environments.items():
 
-        TEST_MOD = 5
-        max_steps = 1000
-        for i in range(TEST_MOD):
-            obs = env.reset()
-            rewards = 0
-            done = False
-            images = []
-            for step in range(max_steps):
-                if i % 2 == 0 and RECORD:
-                    # Render to frames buffer
-                    image = (env.render(mode="rgb_array"))
-                    image = Image.fromarray(image)
-                    images.append(image)
+            name_env = info_env['name_env']
+            early_stop__val = info_env['early_stop_val']
+            batch_size = info_env['batch_size']
 
-                env.render()
-                obs = torch.tensor(obs, dtype=torch.float)
-                act = model(obs).detach().numpy()
-                obs_, rew, done, _ = env.step(act)
-                rewards += rew
-                if done:
-                    break
-                step += 1
-                obs = obs_
+            # create env
+            env = NormalizedEnv(gym.make(name_env))
+            env.action_space.seed(14)
 
-            print(f'Episode: {i} | Rewards: {rewards} | Steps taken: {step}')
-
-            if i % 2 == 0 and RECORD:  # Record
-                num = random.randint(0, 100000)
-                gif(images, 'gif_ppo_mod_' + name_env + "_" + str(num) + 'trained.gif')
-
-        env.close()
+            agent = DDPGAgent(env, fc1=fc1, fc2=fc2, early_stop_val=early_stop__val, batch_size=batch_size)
+            agent.train()
+            agent.test_agent(True, 5, False)  # render, num of iter (default=1), True to test during training
 
     else:
-        # Create agent
-        agent = DDPGAgent(env, fc1=400, fc2=300, batch_size=64, early_stop_val=200)
-        noise = OUNoise(env.action_space)
 
-        TRAINING_EP = 100_000_000
+        for key, info_env in environments.items():
+            name_env = info_env['name_env']
 
-        all_rewards = []
-        mean_rewards = []
-        best_score = -np.inf
+            # create env
+            env = NormalizedEnv(gym.make(name_env))
+            env.action_space.seed(14)
 
-        for ep in range(TRAINING_EP):
-            state = env.reset()
-            noise.reset()
-            rewards = 0
+            n_obs = env.observation_space.shape[0]
+            n_acts = env.action_space.shape[0]
 
-            for step in range(1600):
+            model = Actor(n_obs, fc1, fc2, n_acts, env.action_space)
+            model.load_state_dict(torch.load('./Models/' + 'actor_' + name_env + '_model.pth'))
 
-                action = agent.get_action(state)                 # np array with one val .detach()
-                action_noise = noise.get_action(action, step)
-                new_state, reward, done, _ = env.step(action_noise)
+            for i in range(test_epochs):
+                obs = env.reset()
+                d = False
+                rewards = 0
+                images = []
+                while not d:
+                    if i % 2 == 0 and RECORD:
+                        # Render to frames buffer
+                        image = (env.render(mode="rgb_array"))
+                        image = Image.fromarray(image)
+                        images.append(image)
 
-                agent.replay_buffer.memorize(state, action, reward, done, new_state)
-
-                rewards += reward
-
-                agent.update_models()
-
-                state = new_state
-
-                if done:
-                    agent.log['rewards_ep'] = rewards
-                    agent.log['episode'] = ep
-                    reward_ep = np.mean([agent.test_agent() for _ in range(1)])
-                    agent.log['test_rew'].append(reward_ep)
-                    break
-
-            agent.summary()
-
-            if agent.early_stop:
-                break
-
-        plot(agent.log['rewards'], agent.log['mean_rewards'], agent.log['test_rew'], agent.log['actor_loss'],
-             agent.log['critic_loss'], name_env)
-
-        agent.test_agent(True, 5, False)
-
+                    env.render()
+                    obs = torch.tensor(obs, dtype=torch.float)
+                    act = model(obs).detach().numpy()
+                    obs_, rew, done, _ = env.step(act)
+                    rewards += rew
+                    obs = obs_
+                print(f'Episode: {i} | Rewards: {rewards}')

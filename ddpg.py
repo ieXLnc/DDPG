@@ -3,7 +3,7 @@ import torch # Torch version :1.9.0+cpu
 from torch import nn
 from torch.optim import Adam
 from networks import *
-from utils import ReplayBuffer
+from utils import *
 import pickle
 
 torch.manual_seed(14)
@@ -14,7 +14,7 @@ print("Job will run on {}".format(device))
 
 
 class DDPGAgent:
-    def __init__(self, env, fc1=256, fc2=128, batch_size=128, early_stop_val=-200):
+    def __init__(self, env, fc1=400, fc2=300, batch_size=64, early_stop_val=-200):
 
         self.env = env
         self.n_obs = env.observation_space.shape[0]
@@ -34,8 +34,8 @@ class DDPGAgent:
         self.fc1 = fc1
         self.fc2 = fc2
 
-        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, env.action_space).to(device)
-        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, env.action_space).to(device)
+        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device)
+        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=self.actor_lr)
 
         self.critic = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)        # here out dims to process actions
@@ -52,6 +52,9 @@ class DDPGAgent:
         self.memory_size = 1_000_000
         self.batch_size = batch_size
         self.replay_buffer = ReplayBuffer(self.memory_size, self.batch_size)
+
+        # Noise
+        self.noise = OUNoise(self.env.action_space)
 
         # saving modalities
         self.name_env = env.unwrapped.spec.id
@@ -121,6 +124,59 @@ class DDPGAgent:
         torch.save(self.critic_target.state_dict(), './Models/' + 'critic_target_' + self.name)
         self.replay_buffer.save_memory(self.name)
 
+    def load_all(self):
+
+        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device).\
+            load_state_dict(torch.load('./Models/' + 'actor_' + self.name))
+        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device).\
+            load_state_dict(torch.load('./Models/' + 'actor_target_' + self.name))
+        self.critic = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device).\
+            load_state_dict(torch.load('./Models/' + 'critic_' + self.name))
+        self.critic_target = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device).\
+            load_state_dict(torch.load('./Models/' + 'critic_target_' + self.name))
+        print('Models loaded...')
+        self.replay_buffer.load_memory(self.name)
+        print('Memory loaded...')
+        with open('./Models/logger_' + self.name_env + '.pkl', 'rb') as file:
+            self.log = pickle.load(file)
+
+    def train(self):
+
+        ep = 0
+        while not self.early_stop:
+            state = self.env.reset()
+            self.noise.reset()
+            rewards = 0
+            ep += 1
+            done = False
+
+            for step in range(1000):
+
+                action = self.get_action(state)  # np array with one val .detach()
+                action_noise = self.noise.get_action(action, step)
+                new_state, reward, done, _ = self.env.step(action_noise)
+
+                self.replay_buffer.memorize(state, action, reward, done, new_state)
+                self.update_models()
+
+                rewards += reward
+                state = new_state
+
+                if done:
+                    self.log['rewards_ep'] = rewards
+                    self.log['episode'] = ep
+                    reward_ep = np.mean([self.test_agent() for _ in range(1)])
+                    self.log['test_rew'].append(reward_ep)
+                    break
+
+            self.summary()
+
+            if self.early_stop:
+                break
+
+        plot(self.log['rewards'], self.log['mean_rewards'], self.log['test_rew'], self.log['actor_loss'],
+             self.log['critic_loss'], self.name_env)
+
     def test_agent(self, render=False, n_test=1, test_train=True):
         rewards_ep = []
         for i in range(n_test):
@@ -137,14 +193,13 @@ class DDPGAgent:
                 state = new_state
 
             rewards_ep.append(rewards)
-        if test_train:
+        if test_train:      # get the reward of the ep to test the model on an iteration basis
             return rewards
-        else:
+        else:               # just test the model after its done converging
             for i in range(n_test):
                 print(f'Tests episodes {i} with rewards: {rewards_ep[i]}')
 
     def summary(self):
-
         if len(self.log['rewards']) == 0:
             best_current_score = -np.inf
         else:

@@ -39,6 +39,10 @@ class ReplayBuffer:
         with open('./Models/' + 'memory_' + name, 'wb') as handle:
             pickle.dump(self.buffer, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    def load_memory(self, name):
+        with open('./Models/' + 'memory_' + name, 'rb') as handle:
+            self.buffer = pickle.load(handle)
+
 
 # Ornstein-Ulhenbeck Process
 # Taken from https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
