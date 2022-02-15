@@ -29,6 +29,7 @@ Agent:
 - test reward: test episode played
 - mean early val: mean of last 100 test ep
 
+![Pendulum-v0_6117__plot](https://user-images.githubusercontent.com/63811972/154112501-d7b8a3a8-df96-412b-be30-b9d859d2df05.png)
 
 
 
