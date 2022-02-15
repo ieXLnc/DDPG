@@ -9,26 +9,26 @@ if __name__ == '__main__':
     RECORD = False
     test_epochs = 5
 
-    fc1 = 256
-    fc2 = 128
+    fc1 = 400
+    fc2 = 300
 
     environments = {
         'pendulum': {
             'name_env': 'Pendulum-v0',
             'early_stop_val': -200,
             'batch_size': 64},
-        'mountain': {
-            'name_env': 'MountainCarContinuous-v0',
-            'early_stop_val': 90,
-            'batch_size': 64},
-        'lunar': {
-            'name_env': 'LunarLanderContinuous-v2',
-            'early_stop_val': 200,
-            'batch_size': 64},
-        'biped': {
-            'name_env': 'BipedalWalker-v3',
-            'early_stop_val': 250,
-            'batch_size': 64}
+        # 'mountain': {
+        #     'name_env': 'MountainCarContinuous-v0',
+        #     'early_stop_val': 90,
+        #     'batch_size': 64},
+        # 'lunar': {
+        #     'name_env': 'LunarLanderContinuous-v2',
+        #     'early_stop_val': 200,
+        #     'batch_size': 64},
+        # 'biped': {
+        #     'name_env': 'BipedalWalker-v3',
+        #     'early_stop_val': 250,
+        #     'batch_size': 64}
                    }
 
     if TRAIN:
