@@ -5,8 +5,8 @@ from PIL import Image
 
 if __name__ == '__main__':
 
-    TRAIN = True
-    RECORD = False
+    TRAIN = False
+    RECORD = True
     test_epochs = 5
 
     fc1 = 400
@@ -17,18 +17,18 @@ if __name__ == '__main__':
             'name_env': 'Pendulum-v0',
             'early_stop_val': -200,
             'batch_size': 64},
-        # 'mountain': {
-        #     'name_env': 'MountainCarContinuous-v0',
-        #     'early_stop_val': 90,
-        #     'batch_size': 64},
-        # 'lunar': {
-        #     'name_env': 'LunarLanderContinuous-v2',
-        #     'early_stop_val': 200,
-        #     'batch_size': 64},
-        # 'biped': {
-        #     'name_env': 'BipedalWalker-v3',
-        #     'early_stop_val': 250,
-        #     'batch_size': 64}
+        'mountain': {
+            'name_env': 'MountainCarContinuous-v0',
+            'early_stop_val': 90,
+            'batch_size': 64},
+        'lunar': {
+            'name_env': 'LunarLanderContinuous-v2',
+            'early_stop_val': 200,
+            'batch_size': 64},
+        'biped': {
+            'name_env': 'BipedalWalker-v3',
+            'early_stop_val': 250,
+            'batch_size': 64}
                    }
 
     if TRAIN:
@@ -64,10 +64,10 @@ if __name__ == '__main__':
 
             for i in range(test_epochs):
                 obs = env.reset()
-                d = False
                 rewards = 0
+                d = False
                 images = []
-                while not d:
+                for steps in range(1000):
                     if i % 2 == 0 and RECORD:
                         # Render to frames buffer
                         image = (env.render(mode="rgb_array"))
@@ -79,5 +79,13 @@ if __name__ == '__main__':
                     act = model(obs).detach().numpy()
                     obs_, rew, done, _ = env.step(act)
                     rewards += rew
+                    if d:
+                        break
                     obs = obs_
                 print(f'Episode: {i} | Rewards: {rewards}')
+
+                if i % 2 == 0 and RECORD:  # Record
+                    num = random.randint(0, 100000)
+                    gif(images, 'gif_ppo_mod_' + name_env + "_" + str(num) + 'trained.gif')
+
+            env.close()
