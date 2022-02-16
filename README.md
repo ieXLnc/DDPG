@@ -54,6 +54,9 @@ Agent:
 
 #### BipedalWalker-v3
 
+![gif_ppo_mod_BipedalWalker-v3_96355trained](https://user-images.githubusercontent.com/63811972/154254064-532ddc4f-cda2-4e65-a163-7019fe1d6345.gif)
+
+
 
 
 
