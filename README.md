@@ -29,9 +29,37 @@ Agent:
 - test reward: test episode played
 - mean early val: mean of last 100 test ep
 
+
+#### Pedulum-v0
+
 ![Pendulum-v0_6117__plot](https://user-images.githubusercontent.com/63811972/154112501-d7b8a3a8-df96-412b-be30-b9d859d2df05.png)
 
 ![gif_ppo_mod_Pendulum-v0_92089trained](https://user-images.githubusercontent.com/63811972/154115630-8c58345d-1986-43be-8995-6f896ad25ed6.gif)
+
+
+#### MountainCarContinuous-v0 
+
+![MountainCarContinuous-v0_50795__plot](https://user-images.githubusercontent.com/63811972/154244675-cbdba7a3-b2d3-4514-9791-eef3c034cdd0.png)
+
+![gif_ppo_mod_MountainCarContinuous-v0_92089_BEST](https://user-images.githubusercontent.com/63811972/154248112-eb6d55ae-a715-40a7-be11-7fe90864a3c1.gif)
+
+
+#### LunarLanderContinuous-v2 
+
+![LunarLanderContinuous-v2_99552__plot](https://user-images.githubusercontent.com/63811972/154248183-1ceb8cf2-f430-46cc-9f43-83f217926010.png)
+
+![gif_ppo_mod_LunarLanderContinuous-v2_98986trained_bEST](https://user-images.githubusercontent.com/63811972/154248248-7d2e4531-9a0f-40e4-8d58-1d3ec3024f70.gif)
+
+
+#### BipedalWalker-v3
+
+
+
+
+
+
+
+
 
 
 
