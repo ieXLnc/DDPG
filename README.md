@@ -46,7 +46,8 @@ Agent:
 
 #### LunarLanderContinuous-v2 
 
-![LunarLanderContinuous-v2_99552__plot](https://user-images.githubusercontent.com/63811972/154248183-1ceb8cf2-f430-46cc-9f43-83f217926010.png)
+![LunarLanderContinuous-v2_66734__plot](https://user-images.githubusercontent.com/63811972/154249188-ec5e1922-6a63-41bf-adad-c6cbcd213157.png)
+
 
 ![gif_ppo_mod_LunarLanderContinuous-v2_98986trained_bEST](https://user-images.githubusercontent.com/63811972/154248248-7d2e4531-9a0f-40e4-8d58-1d3ec3024f70.gif)
 
