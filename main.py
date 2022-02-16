@@ -6,7 +6,7 @@ from PIL import Image
 if __name__ == '__main__':
 
     TRAIN = False
-    RECORD = True
+    RECORD = False
     test_epochs = 5
 
     fc1 = 400
@@ -77,12 +77,14 @@ if __name__ == '__main__':
                     env.render()
                     obs = torch.tensor(obs, dtype=torch.float)
                     act = model(obs).detach().numpy()
-                    obs_, rew, done, _ = env.step(act)
+                    obs_, rew, d, _ = env.step(act)
                     rewards += rew
+
                     if d:
                         break
                     obs = obs_
-                print(f'Episode: {i} | Rewards: {rewards}')
+
+                print(f'Episode: {i} | Rewards: {rewards} | steps: {steps}')
 
                 if i % 2 == 0 and RECORD:  # Record
                     num = random.randint(0, 100000)
