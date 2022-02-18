@@ -57,6 +57,29 @@ Agent:
 ![gif_ppo_mod_BipedalWalker-v3_96355trained](https://user-images.githubusercontent.com/63811972/154254064-532ddc4f-cda2-4e65-a163-7019fe1d6345.gif)
 
 
+#### InvertedPendulum-v2
+
+![InvertedPendulum-v2_96925__plot](https://user-images.githubusercontent.com/63811972/154674444-274a71f5-eafd-4d43-a1c0-b75a50106148.png)
+
+
+
+#### HalfCheetah-v2
+
+Trained with 
+- lr_actor: 0.0001
+- lr_critic: 0.001
+- batch_size: 128
+- early_stop = 2500
+
+I will try to train it to reach 3000-3500 but its taking a while, i'm running it on cpu.
+
+![HalfCheetah-v2_95361__plot](https://user-images.githubusercontent.com/63811972/154674490-388c98df-8c45-45f3-97e4-76fb86724cbf.png)
+
+
+https://user-images.githubusercontent.com/63811972/154674582-8204e3d9-22ed-446d-9cf1-741a5c32a679.mp4
+
+
+
 
 
 
