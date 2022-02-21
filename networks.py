@@ -11,15 +11,15 @@ device = torch.device("cuda" if cuda else "cpu")
 print("Job will run on {}".format(device))
 
 
-def weight_init__uniform_net(m):
-    classname = m.__class__.__name__
-    # for every linear layer in the model
-    if classname.find('Linear') != -1:
-        # get the number of inputs
-        n = m.in_features
-        y = 1.0/np.sqrt(n)
-        m.weight.data.uniform_(-y, y)
-        m.bias.data.fill_(0)
+# def weight_init__uniform_net(m):
+#     classname = m.__class__.__name__
+#     # for every linear layer in the model
+#     if classname.find('Linear') != -1:
+#         # get the number of inputs
+#         n = m.in_features
+#         y = 1.0/np.sqrt(n)
+#         m.weight.data.uniform_(-y, y)
+#         m.bias.data.fill_(0)
 
 
 class Critic(nn.Module):
@@ -96,3 +96,7 @@ class Actor(nn.Module):
         x = x * torch.from_numpy(self.action_space.high).float().to(device)
 
         return x
+
+    def add_parameter_noise(self, scalar=.1):
+        for layer in [self.layer1, self.layer2, self.layer3]:
+            layer.weight.data += torch.randn_like(layer.weight.data) * scalar

@@ -14,18 +14,25 @@ print("Job will run on {}".format(device))
 
 
 class DDPGAgent:
-    def __init__(self, env, fc1=400, fc2=300, batch_size=64, early_stop_val=-200):
+    def __init__(self, env, fc1=400, fc2=300, gamma=0.99, actor_lr=0.0001, critic_lr=0.001,
+                 batch_size=64, early_stop_val=-200, normalize=False, noise='param',
+                 noise_std=0.3):
 
         self.env = env
+        self.env_b = env # keep baseline env if endup normalized in train
         self.n_obs = env.observation_space.shape[0]
         self.n_acts = env.action_space.shape[0]
+        self.low = self.env.action_space.low
+        self.high = self.env.action_space.high
+        self.normalize = normalize
+
         self.early_stop_val = early_stop_val
         self.early_stop = False
 
         # hyperparams
-        self.gamma = 0.99
-        self.actor_lr = 0.00005         #0.0001 for pendulum
-        self.critic_lr = 0.0005       # 0.001 for pendulum
+        self.gamma = gamma
+        self.actor_lr = actor_lr
+        self.critic_lr = critic_lr
         self.tau = 0.001
         self.min = -np.inf
         self.max = np.inf
@@ -36,6 +43,7 @@ class DDPGAgent:
 
         self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device)
         self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device)
+        self.actor_perturbed = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=self.actor_lr)
 
         self.critic = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)        # here out dims to process actions
@@ -49,12 +57,17 @@ class DDPGAgent:
             target_params.data.copy_(params.data)
 
         # Memory
-        self.memory_size = 1_000_000
+        self.memory_size = 100_000
         self.batch_size = batch_size
         self.replay_buffer = ReplayBuffer(self.memory_size, self.batch_size)
 
         # Noise
-        self.noise = OUNoise(self.env.action_space)
+        self.noise_type = noise
+        self.noise_std = noise_std
+        self.OU_noise = OUNoise(self.env.action_space, max_sigma=self.noise_std)
+        self.distances = []
+        self.scalar = 0.05   # initial std
+        self.scalar_decay = 0.99
 
         # saving modalities
         self.name_env = env.unwrapped.spec.id
@@ -70,15 +83,36 @@ class DDPGAgent:
             'critic_loss': [0],
             'episode': 0,
             'batch_size': self.batch_size,
-            'test_rew':[]
+            'test_rew': []
         }
 
-    def get_action(self, state):
+    def get_action(self, state, step, evaluate=False):
         if isinstance(state, np.ndarray):
             state = torch.FloatTensor(state).to(device)
-        action = self.actor(state)
 
-        return action.detach().cpu().numpy()
+        # Normalize input here ?
+
+        action = self.actor(state).detach().cpu().numpy()
+
+        if not evaluate or self.noise_type is not None:              # if eval no noise, if noise=None same
+
+            if self.noise_type == 'ou':
+                action = self.OU_noise.get_action(action, step)      # removed the clipped to put it here
+
+            if self.noise_type == 'param':
+                # hard update of actor perturbed
+                self.actor_perturbed.load_state_dict(self.actor.state_dict().copy())
+                self.actor_perturbed.add_parameter_noise(self.scalar)
+                action_noise = self.actor_perturbed(state).detach().cpu().numpy()
+                distance = np.sqrt(np.mean(np.square(action - action_noise)))
+                self.distances.append(distance)
+                # adjust the amount of noise given to the actor_noised
+                if distance > self.noise_std:
+                    self.scalar *= self.scalar_decay
+                if distance < self.noise_std:
+                    self.scalar /= self.scalar_decay
+
+        return np.clip(action, self.low, self.high)
 
     def update_models(self):
 
@@ -124,38 +158,20 @@ class DDPGAgent:
         torch.save(self.critic_target.state_dict(), './Models/' + 'critic_target_' + self.name)
         self.replay_buffer.save_memory(self.name)
 
-    def load_all(self):
-
-        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device).\
-            load_state_dict(torch.load('./Models/' + 'actor_' + self.name))
-        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device).\
-            load_state_dict(torch.load('./Models/' + 'actor_target_' + self.name))
-        self.critic = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device).\
-            load_state_dict(torch.load('./Models/' + 'critic_' + self.name))
-        self.critic_target = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device).\
-            load_state_dict(torch.load('./Models/' + 'critic_target_' + self.name))
-        print('Models loaded...')
-        self.replay_buffer.load_memory(self.name)
-        print('Memory loaded...')
-        with open('./Models/logger_' + self.name_env + '.pkl', 'rb') as file:
-            self.log = pickle.load(file)
-
     def train(self):
-
         ep = 0
         while not self.early_stop:
+            if self.normalize:
+                self.env = NormalizedEnv(self.env)
             state = self.env.reset()
-            self.noise.reset()
+            if self.noise_type == 'ou':
+                self.OU_noise.reset()
             rewards = 0
             ep += 1
-            done = False
 
             for step in range(1000):
-
-                action = self.get_action(state)  # np array with one val .detach()
-                action_noise = self.noise.get_action(action, step)
-                new_state, reward, done, _ = self.env.step(action_noise)
-
+                action = self.get_action(state, step)  # np array with one val .detach()
+                new_state, reward, done, _ = self.env.step(action)
                 self.replay_buffer.memorize(state, action, reward, done, new_state)
                 self.update_models()
 
@@ -163,11 +179,12 @@ class DDPGAgent:
                 state = new_state
 
                 if done:
-                    self.log['rewards_ep'] = rewards
-                    self.log['episode'] = ep
-                    reward_ep = np.mean([self.test_agent() for _ in range(1)])
-                    self.log['test_rew'].append(reward_ep)
                     break
+
+            self.log['rewards_ep'] = rewards
+            self.log['episode'] = ep
+            reward_ep = np.mean([self.test_agent() for _ in range(1)])
+            self.log['test_rew'].append(reward_ep)
 
             self.summary()
 
@@ -178,19 +195,22 @@ class DDPGAgent:
              self.log['critic_loss'], self.name_env)
 
     def test_agent(self, render=False, n_test=1, test_train=True):
+        self.env = self.env_b   # always have non normal env in test
         rewards_ep = []
         for i in range(n_test):
             state = self.env.reset()
             rewards = 0
+            step = 0
             d = False
             while not d:
                 if render: self.env.render()
-                action = self.get_action(state)
+                action = self.get_action(state, step, True)
                 new_state, rew, d, _ = self.env.step(action)
                 rewards += rew
                 if d:
                     break
                 state = new_state
+                step += 1
 
             rewards_ep.append(rewards)
         if test_train:      # get the reward of the ep to test the model on an iteration basis

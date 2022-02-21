@@ -46,7 +46,6 @@ class ReplayBuffer:
 
 # Ornstein-Ulhenbeck Process
 # Taken from https://github.com/vitchyr/rlkit/blob/master/rlkit/exploration_strategies/ou_strategy.py
-
 class OUNoise(object):
     def __init__(self, action_space, mu=0.0, theta=0.15, max_sigma=0.3, min_sigma=0.3, decay_period=100000):
         self.mu = mu
@@ -72,11 +71,10 @@ class OUNoise(object):
     def get_action(self, action, t=0):
         ou_state = self.evolve_state()
         self.sigma = self.max_sigma - (self.max_sigma - self.min_sigma) * min(1.0, t / self.decay_period)
-        return np.clip(action + ou_state, self.low, self.high)
+        return action + ou_state
 
 
 # https://github.com/openai/gym/blob/master/gym/core.py
-
 class NormalizedEnv(gym.ActionWrapper):
     """ Wrap action """
 
@@ -123,5 +121,5 @@ def plot(rewards_list, avg_reward_list, test_rewards, actor_loss_list, critic_lo
     plt.show()
 
 
-def gif(images, name, address="./recordings/"):
+def gif(images, name, address="./Recordings/"):
     images[0].save(address + name, save_all=True, append_images=images[1:], optimize=True, duration=40, loop=0)
