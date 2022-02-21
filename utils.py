@@ -74,6 +74,64 @@ class OUNoise(object):
         return action + ou_state
 
 
+# Adapted from https://stable-baselines.readthedocs.io/en/master/_modules/stable_baselines/common/noise.html
+class AdaptiveParamNoiseSpec(object):
+    """
+    Implements adaptive parameter noise
+    :param initial_stddev: (float) the initial value for the standard deviation of the noise
+    :param desired_action_stddev: (float) the desired value for the standard deviation of the noise
+    :param adoption_coefficient: (float) the update coefficient for the standard deviation of the noise
+    """
+
+    def __init__(self, initial_stddev=0.05, desired_action_stddev=0.3, adoption_coefficient=1.01):
+        self.initial_stddev = initial_stddev
+        self.desired_action_stddev = desired_action_stddev
+        self.adoption_coefficient = adoption_coefficient
+
+        self.current_stddev = initial_stddev
+
+    def adapt(self, action, action_noise):
+        """
+        update the standard deviation for the parameter noise
+        :param action: action without noise
+        :param action noise: action calculated with perturb actor
+        """
+        distance = np.sqrt(np.mean(np.square(action - action_noise)))
+
+        if distance > self.desired_action_stddev:
+            # Decrease stddev.
+            self.current_stddev /= self.adoption_coefficient
+        else:
+            # Increase stddev.
+            self.current_stddev *= self.adoption_coefficient
+
+    def noise(self):
+        return self.current_stddev
+
+
+class GaussianStrategy(object):
+    """
+    This strategy adds Gaussian noise to the action taken by the deterministic policy.
+    Based on the rllab implementation.
+    """
+    def __init__(self, action_space, max_sigma=1.0, min_sigma=None,
+                 decay_period=1000000):
+        assert len(action_space.shape) == 1
+        self._max_sigma = max_sigma
+        if min_sigma is None:
+            min_sigma = max_sigma
+        self._min_sigma = min_sigma
+        self._decay_period = decay_period
+        self._action_space = action_space
+
+    def get_action(self, action, t=None, **kwargs):
+        sigma = (
+            self._max_sigma - (self._max_sigma - self._min_sigma) *
+            min(1.0, t * 1.0 / self._decay_period)
+        )
+        return action + np.random.normal(size=len(action)) * sigma
+
+
 # https://github.com/openai/gym/blob/master/gym/core.py
 class NormalizedEnv(gym.ActionWrapper):
     """ Wrap action """

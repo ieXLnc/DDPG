@@ -20,7 +20,7 @@ if __name__ == '__main__':
     name_env: name of the env
     early_stop_val: mean of the last 100 test reward score
     batch_size: batch size taken in the learn function at each step (def 64)
-    noise: noise implemented {None, 'ou', 'param' --> manque gaussian}
+    noise: noise implemented {None, 'ou', 'param', 'normal'}
     noise_std: std of the noise
     actor_lr: def 0.0001
     critic_lr: def 0.001
@@ -46,52 +46,57 @@ if __name__ == '__main__':
         # 'lunar': {
         #     'name_env': 'LunarLanderContinuous-v2',
         #     'early_stop_val': 200,
-        #     'batch_size': 64},
-        # 'biped': {
-        #     'name_env': 'BipedalWalker-v3',
-        #     'early_stop_val': 300,
-        #     'batch_size': 256,
-        #     'noise': 'param',
-        #     'noise_std': 0.287,
-        #     'normalize': True,
-        #     'actor_lr': 0.000527,
-        #     'gamma': 0.999},
-        'pendulum_muj': {
-            'name_env': 'InvertedPendulum-v2',
-            'early_stop_val': 900,
-            'batch_size': 64,
-            'noise': 'param',
-            'noise_std': 0.3,
-            'normalize': False,
-            'actor_lr': 0.0001,
-            'gamma': 0.99},
-        'cheetah': {
-            'name_env': 'HalfCheetah-v2',
-            'early_stop_val': 2500,
+        #     'batch_size': 64,
+        #     'noise': 'ou',
+        #     'noise_std': 0.1,
+        #     'normalize': False,
+        #     'actor_lr': 0.0001,
+        #     'gamma': 0.99},
+        'biped': {
+            'name_env': 'BipedalWalker-v3',
+            'early_stop_val': 300,
             'batch_size': 256,
-            'noise': 'ou',
-            'noise_std': 0.22,
-            'normalize': True,
-            'actor_lr': 0.0001,
-            'gamma': 0.95},
-        'ant': {
-            'name_env': 'Ant-v2',
-            'early_stop_val': 3000,
-            'batch_size': 64,
             'noise': 'param',
-            'noise_std': 0.3,
+            'noise_std': 0.287,
             'normalize': True,
-            'actor_lr': 0.0001,
-            'gamma': 0.99},
-        'human': {
-            'name_env': 'Humanoid-v2',
-            'early_stop_val': 1500,
-            'batch_size': 64,
-            'noise': 'param',
-            'noise_std': 0.3,
-            'normalize': True,
-            'actor_lr': 0.0001,
-            'gamma': 0.99}
+            'actor_lr': 0.000527,
+            'gamma': 0.999},
+        # 'pendulum_muj': {
+        #     'name_env': 'InvertedPendulum-v2',
+        #     'early_stop_val': 900,
+        #     'batch_size': 64,
+        #     'noise': 'param',
+        #     'noise_std': 0.3,
+        #     'normalize': False,
+        #     'actor_lr': 0.0001,
+        #     'gamma': 0.99},
+        # 'cheetah': {
+        #     'name_env': 'HalfCheetah-v2',
+        #     'early_stop_val': 2500,
+        #     'batch_size': 256,
+        #     'noise': 'normal',
+        #     'noise_std': 0.22,
+        #     'normalize': True,
+        #     'actor_lr': 0.0001,
+        #     'gamma': 0.95},
+        # 'ant': {
+        #     'name_env': 'Ant-v2',
+        #     'early_stop_val': 3000,
+        #     'batch_size': 64,
+        #     'noise': 'normal',
+        #     'noise_std': 0.3,
+        #     'normalize': True,
+        #     'actor_lr': 0.0001,
+        #     'gamma': 0.99},
+        # 'human': {
+        #     'name_env': 'Humanoid-v2',
+        #     'early_stop_val': 1500,
+        #     'batch_size': 64,
+        #     'noise': 'normal',
+        #     'noise_std': 0.3,
+        #     'normalize': True,
+        #     'actor_lr': 0.0001,
+        #     'gamma': 0.99}
                    }
 
     if TRAIN:

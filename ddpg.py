@@ -15,7 +15,7 @@ print("Job will run on {}".format(device))
 
 class DDPGAgent:
     def __init__(self, env, fc1=400, fc2=300, gamma=0.99, actor_lr=0.0001, critic_lr=0.001,
-                 batch_size=64, early_stop_val=-200, normalize=False, noise='param',
+                 batch_size=64, early_stop_val=-200, normalize=False, noise=None,
                  noise_std=0.3):
 
         self.env = env
@@ -64,10 +64,21 @@ class DDPGAgent:
         # Noise
         self.noise_type = noise
         self.noise_std = noise_std
-        self.OU_noise = OUNoise(self.env.action_space, max_sigma=self.noise_std)
-        self.distances = []
-        self.scalar = 0.05   # initial std
-        self.scalar_decay = 0.99
+        self.initial_stddev = 0.05   # initial std
+        # self.desired_action_stddev = 0.3
+        self.adoption_coefficient = 1.01
+        if self.noise_type is not None:
+            if self.noise_type == 'ou':
+                self.OU_noise = OUNoise(self.env.action_space, max_sigma=self.noise_std)
+                print('Ou noise used')
+            if self.noise_type == 'param':
+                self.Adapt_noise = AdaptiveParamNoiseSpec(initial_stddev=self.initial_stddev, desired_action_stddev=self.noise_std)
+                print('Adaptive noise used')
+            if self.noise_type == 'normal':
+                self.Gauss_noise = GaussianStrategy(self.env.action_space, max_sigma=self.noise_std)
+                print('Gaussian noise used')
+        if self.noise_type is None:
+            print('No noise added.')
 
         # saving modalities
         self.name_env = env.unwrapped.spec.id
@@ -90,8 +101,6 @@ class DDPGAgent:
         if isinstance(state, np.ndarray):
             state = torch.FloatTensor(state).to(device)
 
-        # Normalize input here ?
-
         action = self.actor(state).detach().cpu().numpy()
 
         if not evaluate or self.noise_type is not None:              # if eval no noise, if noise=None same
@@ -102,15 +111,12 @@ class DDPGAgent:
             if self.noise_type == 'param':
                 # hard update of actor perturbed
                 self.actor_perturbed.load_state_dict(self.actor.state_dict().copy())
-                self.actor_perturbed.add_parameter_noise(self.scalar)
+                self.actor_perturbed.add_parameter_noise(self.Adapt_noise.noise())
                 action_noise = self.actor_perturbed(state).detach().cpu().numpy()
-                distance = np.sqrt(np.mean(np.square(action - action_noise)))
-                self.distances.append(distance)
-                # adjust the amount of noise given to the actor_noised
-                if distance > self.noise_std:
-                    self.scalar *= self.scalar_decay
-                if distance < self.noise_std:
-                    self.scalar /= self.scalar_decay
+                self.Adapt_noise.adapt(action, action_noise)
+
+            if self.noise_type == 'normal':
+                action = self.Gauss_noise.get_action(action, step)
 
         return np.clip(action, self.low, self.high)
 
