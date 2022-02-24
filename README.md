@@ -10,7 +10,7 @@ I tried to implement several noise options:
 - Gaussian noise
 - Adaptive noise
 
-### The model can take the following hyperparameters:
+### The model takes the following hyperparameters by default:
 - fc1=400 (nodes on the first dense layer)
 - fc2=300 (nodes on the second dense layer)
 - gamma=0.99
