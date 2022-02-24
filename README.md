@@ -53,7 +53,7 @@ Critic:
 
 #### MountainCarContinuous-v0 
 
-![MountainCarContinuous-v0_50795__plot](https://user-images.githubusercontent.com/63811972/154244675-cbdba7a3-b2d3-4514-9791-eef3c034cdd0.png)
+![MountainCarContinuous-v0_model_ou_0 3_normalize_True_ln_False pth_50145__plot](https://user-images.githubusercontent.com/63811972/155578130-d66c51de-e7bd-47c8-a899-8bf1442844e1.png)
 
 ![gif_ppo_mod_MountainCarContinuous-v0_92089_BEST](https://user-images.githubusercontent.com/63811972/154248112-eb6d55ae-a715-40a7-be11-7fe90864a3c1.gif)
 
