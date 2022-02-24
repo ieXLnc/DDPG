@@ -73,6 +73,7 @@ class OUNoise(object):
         return action + ou_state
 
 
+# from https://stable-baselines.readthedocs.io/en/master/_modules/stable_baselines/common/noise.html
 class AdaptiveParamNoiseSpec(object):
     def __init__(self, initial_stddev=0.1, desired_action_stddev=0.2, adaptation_coefficient=1.01):
         """
@@ -104,6 +105,7 @@ class AdaptiveParamNoiseSpec(object):
         return fmt.format(self.initial_stddev, self.desired_action_stddev, self.adaptation_coefficient)
 
 
+# from https://github.com/rail-berkeley/rlkit/blob/master/rlkit/exploration_strategies/gaussian_strategy.py
 class GaussianStrategy(object):
     """
     This strategy adds Gaussian noise to the action taken by the deterministic policy.
