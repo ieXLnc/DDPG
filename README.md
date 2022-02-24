@@ -45,7 +45,8 @@ Critic:
 
 #### Pedulum-v0
 
-![Pendulum-v0_6117__plot](https://user-images.githubusercontent.com/63811972/154112501-d7b8a3a8-df96-412b-be30-b9d859d2df05.png)
+![Pendulum-v1_model_ou_0 2_normalize_True_ln_False pth_81266__plot](https://user-images.githubusercontent.com/63811972/155567682-20b01367-ab8f-4a98-922f-cbfd1bb83168.png)
+
 
 ![gif_ppo_mod_Pendulum-v0_92089trained](https://user-images.githubusercontent.com/63811972/154115630-8c58345d-1986-43be-8995-6f896ad25ed6.gif)
 
