@@ -1,14 +1,38 @@
 # DDPG
 
-Model in training!
 
-### Hyperparams
+Pytorch implementation of the a Deep Deterministic Policy Gradient agent following the [continuous control with deep reinforcement learning](https://arxiv.org/abs/1509.02971) paper by Timothy P. Lillicrap, Jonathan J. Hunt, Alexander Pritzel, Nicolas Heess, Tom Erez, Yuval Tassa, David Silver, Daan Wierstra.
+
+The agent is implemented to solved multiples gym environement (pendulum, mountaincar, lunarlander, bipedwalker) and mujoco environment (halfcheetah, ant, humanoid). 
+
+I tried to implement several noise options:
+- Ornstein-Ulhenbeck noise
+- Gaussian noise
+- Adaptive noise
+
+### The model can take the following hyperparameters:
+- fc1=400 (nodes on the first dense layer)
+- fc2=300 (nodes on the second dense layer)
+- gamma=0.99
+- tau=0.001
+- actor_lr=0.0001
+- critic_lr=0.001
+- batch_size=64
+- normalize=False (normalize environment with gym wrapper)
+- noise=None
+- noise_std=0.3
+- layer_norm=True
+- interval_adapt=5 (if param noise, update the stddev every five episodes)
+- early_stop_val=-200 (if want to reach a maximum score, based on the last 100 test rewards score)
+- early_stop_timesteps=2e6
+
+### The two nets
 
 Actor Net:
 - in_dims: n_obs
 - fc1: 400 (Relu activation)
 - fc2: 300 (Relu activation)
-- lr: 0.00005
+- lr: 0.0001
 - out_dims: n_acts (Tanh activation) * action_space.high
 - uniform_ init of the weights
 
@@ -16,18 +40,9 @@ Critic:
 - in_dims: n_obs
 - fc1: 400 (Relu activation)
 - fc2: 300 + n_acts (Relu activation)
-- lr: 0.0005
+- lr: 0.001
 - out_dims: 1
 - uniform_ init of the weights
-
-Agent:
-- gamma: 0.99
-- tau: 0.001
-- batch_size = 64
-- reward: rewards for the ep
-- mean reward: mean of last 10 rewards
-- test reward: test episode played
-- mean early val: mean of last 100 test ep
 
 
 #### Pedulum-v0
@@ -64,12 +79,6 @@ Agent:
 
 
 #### HalfCheetah-v2
-
-Trained with 
-- lr_actor: 0.0001
-- lr_critic: 0.001
-- batch_size: 128
-- early_stop = 2500
 
 I will try to train it to reach 3000-3500 but its taking a while, i'm running it on cpu.
 
