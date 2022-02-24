@@ -5,6 +5,7 @@ from torch.optim import Adam
 from networks import *
 from utils import *
 import pickle
+import matplotlib.pyplot as plt
 
 torch.manual_seed(14)
 # set GPU for faster training
@@ -14,12 +15,11 @@ print("Job will run on {}".format(device))
 
 
 class DDPGAgent:
-    def __init__(self, env, fc1=400, fc2=300, gamma=0.99, actor_lr=0.0001, critic_lr=0.001,
+    def __init__(self, env, fc1=400, fc2=300, gamma=0.99, tau=0.01, actor_lr=0.01, critic_lr=0.001,
                  batch_size=64, early_stop_val=-200, normalize=False, noise=None,
-                 noise_std=0.3):
+                 noise_std=0.3, layer_norm=True, interval_adapt=5, early_stop_timesteps=2e6):
 
         self.env = env
-        self.env_b = env # keep baseline env if endup normalized in train
         self.n_obs = env.observation_space.shape[0]
         self.n_acts = env.action_space.shape[0]
         self.low = self.env.action_space.low
@@ -28,26 +28,28 @@ class DDPGAgent:
 
         self.early_stop_val = early_stop_val
         self.early_stop = False
+        self.early_stop_timesteps = early_stop_timesteps
 
         # hyperparams
         self.gamma = gamma
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
-        self.tau = 0.001
+        self.tau = tau
         self.min = -np.inf
         self.max = np.inf
 
         # Create the networks
         self.fc1 = fc1
         self.fc2 = fc2
+        self.layer_norm = layer_norm
 
-        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device)
-        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device)
-        self.actor_perturbed = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space).to(device)
+        self.actor = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space, self.layer_norm).to(device)
+        self.actor_target = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space, self.layer_norm).to(device)
+        self.actor_perturbed = Actor(self.n_obs, self.fc1, self.fc2, self.n_acts, self.env.action_space, self.layer_norm).to(device)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=self.actor_lr)
 
-        self.critic = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)        # here out dims to process actions
-        self.critic_target = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts).to(device)  # here out dims to process actions
+        self.critic = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts, self.layer_norm).to(device)        # here out dims to process actions
+        self.critic_target = Critic(self.n_obs, self.fc1, self.fc2, self.n_acts, self.layer_norm).to(device)  # here out dims to process actions
         self.critic_optimizer = Adam(self.critic.parameters(), lr=self.critic_lr)
 
         # setup weights
@@ -72,7 +74,10 @@ class DDPGAgent:
                 self.OU_noise = OUNoise(self.env.action_space, max_sigma=self.noise_std)
                 print('Ou noise used')
             if self.noise_type == 'param':
-                self.Adapt_noise = AdaptiveParamNoiseSpec(initial_stddev=self.initial_stddev, desired_action_stddev=self.noise_std)
+                self.param_noise = AdaptiveParamNoiseSpec(initial_stddev=self.initial_stddev, desired_action_stddev=self.noise_std)
+                self.interval_adapt = interval_adapt
+                self.distance = []
+                self.stddev = []
                 print('Adaptive noise used')
             if self.noise_type == 'normal':
                 self.Gauss_noise = GaussianStrategy(self.env.action_space, max_sigma=self.noise_std)
@@ -82,7 +87,8 @@ class DDPGAgent:
 
         # saving modalities
         self.name_env = env.unwrapped.spec.id
-        self.name = self.name_env + '_model.pth'
+        self.name = self.name_env + '_model_' + str(self.noise_type) + '_' + str(self.noise_std) + '_normalize_' \
+                    + str(self.normalize) + '_ln_' + str(self.layer_norm) + '.pth'
 
         # Create log
         self.log = {
@@ -94,8 +100,31 @@ class DDPGAgent:
             'critic_loss': [0],
             'episode': 0,
             'batch_size': self.batch_size,
-            'test_rew': []
+            'test_rew': [],
+            'timesteps': 0
         }
+
+    def get_perturbed_actor(self):
+        # make a hardcopy of the actor
+        for target_params, params in zip(self.actor_perturbed.parameters(), self.actor.parameters()):
+            target_params.data.copy_(params.data)
+        params = self.actor_perturbed.state_dict()
+        for name in params:
+            if 'ln' in name:
+                pass
+            param = params[name]
+            param.data += torch.normal(mean=torch.zeros(param.shape),
+                                       std=self.param_noise.current_stddev).to(device)
+
+    def ddpg_distance_metric(self, actions1, actions2):
+        """
+        Compute "distance" between actions taken by two policies at the same states
+        Expects numpy arrays
+        """
+        diff = actions1 - actions2
+        mean_diff = np.mean(np.square(diff), axis=0)
+        dist = np.sqrt(np.mean(mean_diff))
+        return dist
 
     def get_action(self, state, step, evaluate=False):
         if isinstance(state, np.ndarray):
@@ -109,11 +138,7 @@ class DDPGAgent:
                 action = self.OU_noise.get_action(action, step)      # removed the clipped to put it here
 
             if self.noise_type == 'param':
-                # hard update of actor perturbed
-                self.actor_perturbed.load_state_dict(self.actor.state_dict().copy())
-                self.actor_perturbed.add_parameter_noise(self.Adapt_noise.noise())
-                action_noise = self.actor_perturbed(state).detach().cpu().numpy()
-                self.Adapt_noise.adapt(action, action_noise)
+                action = self.actor_perturbed(state).detach().cpu().numpy()
 
             if self.noise_type == 'normal':
                 action = self.Gauss_noise.get_action(action, step)
@@ -165,15 +190,19 @@ class DDPGAgent:
         self.replay_buffer.save_memory(self.name)
 
     def train(self):
-        ep = 0
+        ep = 1
         while not self.early_stop:
             if self.normalize:
                 self.env = NormalizedEnv(self.env)
             state = self.env.reset()
             if self.noise_type == 'ou':
                 self.OU_noise.reset()
+            if self.noise_type == 'param' and ep % self.interval_adapt == 0:
+                self.get_perturbed_actor()
+
             rewards = 0
-            ep += 1
+            action_noise = []
+            states_noise = []
 
             for step in range(1000):
                 action = self.get_action(state, step)  # np array with one val .detach()
@@ -184,6 +213,9 @@ class DDPGAgent:
                 rewards += reward
                 state = new_state
 
+                action_noise.append(action)
+                states_noise.append(state)
+
                 if done:
                     break
 
@@ -191,17 +223,39 @@ class DDPGAgent:
             self.log['episode'] = ep
             reward_ep = np.mean([self.test_agent() for _ in range(1)])
             self.log['test_rew'].append(reward_ep)
+            self.log['timesteps'] += step
 
             self.summary()
+
+            if self.noise_type == 'param' and ep % self.interval_adapt == 0:
+                states_noise = torch.tensor(states_noise, dtype=torch.float).to(device)
+                unperturbed_actions = self.actor(states_noise).detach().cpu().numpy()
+                perturbed_actions = np.asarray(action_noise)
+                distance = self.ddpg_distance_metric(perturbed_actions, unperturbed_actions)
+                self.param_noise.adapt(distance)
+                print('distance = ', distance)
+                self.distance.append(distance)
+                print('current stddev = ', self.param_noise.current_stddev)
+                self.stddev.append(self.param_noise.current_stddev)
 
             if self.early_stop:
                 break
 
+            ep += 1
+
+        if self.noise_type =='param':
+            plt.plot(self.distance)
+            plt.savefig('./Plots/distance_' + str(self.noise_type))
+            plt.close()
+            plt.plot(self.stddev)
+            plt.savefig('./Plots/stddev' + str(self.noise_type))
+            plt.close()
+
+
         plot(self.log['rewards'], self.log['mean_rewards'], self.log['test_rew'], self.log['actor_loss'],
-             self.log['critic_loss'], self.name_env)
+             self.log['critic_loss'], self.name_env, self.name)
 
     def test_agent(self, render=False, n_test=1, test_train=True):
-        self.env = self.env_b   # always have non normal env in test
         rewards_ep = []
         for i in range(n_test):
             state = self.env.reset()
@@ -254,8 +308,9 @@ class DDPGAgent:
         print(f'Actor loss: {self.log["actor_loss"][-1]}')
         print(f'Critic loss: {self.log["critic_loss"][-1]}')
         print(f'With Batch size of {self.log["batch_size"]}')
+        print(f'Timesteps: {self.log["timesteps"]}')
 
-        if mean_early_stop > self.early_stop_val:
+        if mean_early_stop > self.early_stop_val or self.log["timesteps"] >= 100_000:
             self.early_stop = True
             self.save_models()
             with open('./Models/logger_' + self.name_env + '.pkl', 'wb') as handle:

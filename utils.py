@@ -13,7 +13,6 @@ torch.manual_seed(14)
 cuda = torch.cuda.is_available()  # check for CUDA
 device = torch.device("cuda" if cuda else "cpu")
 
-
 class ReplayBuffer:
     def __init__(self, max_size, batch_size):
         self.max_size = max_size
@@ -74,39 +73,35 @@ class OUNoise(object):
         return action + ou_state
 
 
-# Adapted from https://stable-baselines.readthedocs.io/en/master/_modules/stable_baselines/common/noise.html
 class AdaptiveParamNoiseSpec(object):
-    """
-    Implements adaptive parameter noise
-    :param initial_stddev: (float) the initial value for the standard deviation of the noise
-    :param desired_action_stddev: (float) the desired value for the standard deviation of the noise
-    :param adoption_coefficient: (float) the update coefficient for the standard deviation of the noise
-    """
-
-    def __init__(self, initial_stddev=0.05, desired_action_stddev=0.3, adoption_coefficient=1.01):
+    def __init__(self, initial_stddev=0.1, desired_action_stddev=0.2, adaptation_coefficient=1.01):
+        """
+        Note that initial_stddev and current_stddev refer to std of parameter noise,
+        but desired_action_stddev refers to (as name notes) desired std in action space
+        """
         self.initial_stddev = initial_stddev
         self.desired_action_stddev = desired_action_stddev
-        self.adoption_coefficient = adoption_coefficient
+        self.adaptation_coefficient = adaptation_coefficient
 
         self.current_stddev = initial_stddev
 
-    def adapt(self, action, action_noise):
-        """
-        update the standard deviation for the parameter noise
-        :param action: action without noise
-        :param action noise: action calculated with perturb actor
-        """
-        distance = np.sqrt(np.mean(np.square(action - action_noise)))
-
+    def adapt(self, distance):
         if distance > self.desired_action_stddev:
             # Decrease stddev.
-            self.current_stddev /= self.adoption_coefficient
+            self.current_stddev /= self.adaptation_coefficient
         else:
             # Increase stddev.
-            self.current_stddev *= self.adoption_coefficient
+            self.current_stddev *= self.adaptation_coefficient
 
-    def noise(self):
-        return self.current_stddev
+    def get_stats(self):
+        stats = {
+            'param_noise_stddev': self.current_stddev,
+        }
+        return stats
+
+    def __repr__(self):
+        fmt = 'AdaptiveParamNoiseSpec(initial_stddev={}, desired_action_stddev={}, adaptation_coefficient={})'
+        return fmt.format(self.initial_stddev, self.desired_action_stddev, self.adaptation_coefficient)
 
 
 class GaussianStrategy(object):
@@ -147,7 +142,7 @@ class NormalizedEnv(gym.ActionWrapper):
         return act_k_inv * (action - act_b)
 
 
-def plot(rewards_list, avg_reward_list, test_rewards, actor_loss_list, critic_loss_list, name_task):
+def plot(rewards_list, avg_reward_list, test_rewards, actor_loss_list, critic_loss_list, name_task, all_name):
 
     # Create two plots: one for the loss value, one for the accuracy
     fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, figsize=(24, 10))
@@ -155,7 +150,7 @@ def plot(rewards_list, avg_reward_list, test_rewards, actor_loss_list, critic_lo
     # Plot accuracy values
     ax1.plot(rewards_list, label='Rewards', color='red', alpha=0.3)
     ax1.plot(avg_reward_list, label='Average rewards', color='red')
-    ax1.plot(test_rewards, label='Test rewards', color='green')
+    ax1.plot(test_rewards, label='Test rewards', color='green', alpha=0.6)
     ax1.set_title('Rewards for the {} task'.format(name_task))
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel('Rewards')
@@ -174,8 +169,9 @@ def plot(rewards_list, avg_reward_list, test_rewards, actor_loss_list, critic_lo
     ax3.set_ylabel('Losses')
     ax3.legend()
 
+    fig.suptitle(all_name)
     number = random.randint(1, 100000)
-    plt.savefig("./Plots/" + name_task + '_' + str(number) + '_' + '_plot.png')
+    plt.savefig("./Plots/" + all_name + '_' + str(number) + '_' + '_plot.png')
     plt.show()
 
 
