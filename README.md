@@ -21,7 +21,7 @@ I tried to implement several noise options:
 - normalize=False (normalize environment with gym wrapper)
 - noise=None
 - noise_std=0.3
-- layer_norm=True
+- layer_norm=False (LayerNormalisation on dense layers if set to True)
 - interval_adapt=5 (if param noise, update the stddev every five episodes)
 - early_stop_val=-200 (if want to reach a maximum score, based on the last 100 test rewards score)
 - early_stop_timesteps=2e6
