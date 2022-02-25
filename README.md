@@ -78,9 +78,6 @@ Critic:
 
 #### HalfCheetah-v2
 
-I will try to train it to reach 3000-3500 but its taking a while, i'm running it on cpu.
-
-
 ![HalfCheetah-v2_model_param_0 2_normalize_True_ln_False pth_71312__plot](https://user-images.githubusercontent.com/63811972/155771610-43ecfb54-48ef-4a5d-a465-562ca6d5c91d.png)
 
 https://user-images.githubusercontent.com/63811972/155771505-aa285672-da71-43d9-afa6-fad2122d00bc.mp4
