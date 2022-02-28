@@ -297,7 +297,7 @@ class DDPGAgent:
         print(f'Mean value for last 10 {self.log["mean_rewards"][-1]}')
         if last_val > best_current_score:
             self.save_models()
-            with open('./Models/logger_' + self.name_env + '.pkl', 'wb') as handle:
+            with open('./Models/logger_' + self.name + '.pkl', 'wb') as handle:
                 pickle.dump(self.log, handle, protocol=pickle.HIGHEST_PROTOCOL)
             print(f'New models saved with {last_val}')
         else:
@@ -310,10 +310,10 @@ class DDPGAgent:
         print(f'With Batch size of {self.log["batch_size"]}')
         print(f'Timesteps: {self.log["timesteps"]}')
 
-        if mean_early_stop > self.early_stop_val or self.log["timesteps"] >= 100_000:
+        if mean_early_stop > self.early_stop_val or self.log["timesteps"] >= self.early_stop_timesteps:
             self.early_stop = True
             self.save_models()
-            with open('./Models/logger_' + self.name_env + '.pkl', 'wb') as handle:
+            with open('./Models/logger_' + self.name + '.pkl', 'wb') as handle:
                 pickle.dump(self.log, handle, protocol=pickle.HIGHEST_PROTOCOL)
             print(f'Early stop activated with score {last_val} at episode {self.log["episode"]}')
         print(f'-------------------------------------------------')
