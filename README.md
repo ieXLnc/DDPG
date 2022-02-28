@@ -78,9 +78,19 @@ Critic:
 
 #### HalfCheetah-v2
 
-![HalfCheetah-v2_model_param_0 2_normalize_True_ln_False pth_71312__plot](https://user-images.githubusercontent.com/63811972/155771610-43ecfb54-48ef-4a5d-a465-562ca6d5c91d.png)
+![HalfCheetah-v2_model_param_0 2_normalize_True_ln_False pth_6163__plot](https://user-images.githubusercontent.com/63811972/155986547-2ea61c82-1ba9-4114-80c3-9dc31c538345.png)
+
 
 https://user-images.githubusercontent.com/63811972/155771505-aa285672-da71-43d9-afa6-fad2122d00bc.mp4
+
+
+#### Ant-v2
+
+
+![Ant-v2_model_param_0 2_normalize_True_ln_True pth_29968__plot](https://user-images.githubusercontent.com/63811972/155986521-28bba9a2-23d7-4f22-9b14-a384278f992c.png)
+
+
+https://user-images.githubusercontent.com/63811972/155986483-c4215b9f-46df-48ad-ac1f-f260e3a1e447.mp4
 
 
 
