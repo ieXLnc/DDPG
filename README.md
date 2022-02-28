@@ -5,7 +5,8 @@ Pytorch implementation of the a Deep Deterministic Policy Gradient agent followi
 
 The agent is implemented to solve multiple gym environments  (pendulum, mountaincar, lunarlander, bipedwalker) and mujoco environment (halfcheetah, ant, humanoid). 
 
-I tried to implement several noise options:
+I implemented several noise options:
+- No noise (None)
 - Ornstein-Ulhenbeck noise
 - Gaussian noise
 - Adaptive noise
