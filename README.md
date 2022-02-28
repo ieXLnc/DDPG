@@ -30,15 +30,19 @@ I tried to implement several noise options:
 
 Actor Net:
 - in_dims: n_obs
-- fc1: 400 (Relu activation)
+- fc1: 400 (Relu activation) 
+- LayerNorm if True
 - fc2: 300 (Relu activation)
+- LayerNorm if True
 - out_dims: n_acts (Tanh activation) * action_space.high
 - uniform_ init of the weights
 
 Critic:
 - in_dims: n_obs
 - fc1: 400 (Relu activation)
+- LayerNorm if True
 - fc2: 300 + n_acts (Relu activation)
+- LayerNorm if True
 - out_dims: 1
 - uniform_ init of the weights
 
